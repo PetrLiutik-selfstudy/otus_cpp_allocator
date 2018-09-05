@@ -9,6 +9,7 @@ add_executable(${PROJECT_NAME} main.cpp)
 
 #add_library(ver_lib ver.cpp)
 #add_library(allocator_lib allocator.cpp)
+add_library(custom_heap_lib custom_heap.h custom_heap.cpp)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 14
@@ -18,5 +19,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 #target_link_libraries(${PROJECT_NAME} ver_lib)
 #target_link_libraries(${PROJECT_NAME} allocator_lib)
+target_link_libraries(${PROJECT_NAME} custom_heap_lib)
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)

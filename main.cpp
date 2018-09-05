@@ -2,6 +2,8 @@
 #include <map>
 #include <vector>
 
+#include "custom_heap.h"
+
 using namespace std;
 
 template <typename T>
@@ -30,7 +32,7 @@ class CustomAllocator
 
     pointer allocate(size_type n, const void* = 0) {
       // TODO сделать собственный менеджер кучи.
-      T* ptr = reinterpret_cast<T*>(malloc(n * sizeof(T)));
+      T* ptr = reinterpret_cast<T*>(customMalloc(n * sizeof(T)));
       std::cout << "Allocate "          << n
                 << " block(s) of size " << sizeof(T)
                 << " at address "       << ptr << std::endl;
@@ -40,7 +42,7 @@ class CustomAllocator
     void deallocate(void* ptr, size_type) {
       if (ptr) {
         // TODO сделать собственный менеджер кучи.
-        free(ptr);
+        customFree(ptr);
         std::cout << "Deallocate at address " << ptr << std::endl;
       }
     }
@@ -94,6 +96,11 @@ class CustomAllocator
 
 int main()
 {
+  int* xxx = NULL;
+  xxx = reinterpret_cast<int*>(customMalloc((1000 * sizeof(int))));
+
+  customFree(xxx);
+
   std::map<int, int> aaa;
   aaa[1] = 21;
 

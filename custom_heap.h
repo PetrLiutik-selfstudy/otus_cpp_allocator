@@ -4,21 +4,20 @@
 static constexpr size_t HEAP_SIZE = 65536;
 
 /**
- * @brief customMalloc - функция выделения памяти в куче.
+ * @brief Выделение памяти в куче.
  * @param size - размер выделяемого блока памяти.
  * @return указатель на выделенный блок памяти.
  */
 void* customMalloc(size_t size);
 
 /**
- * @brief customFree - функция освобождения памяти в куче.
+ * @brief Освобождение памяти в куче.
  * @param ptr - указатель на удаляемый блок памяти.
- * @return
  */
 void customFree(void* ptr);
 
 /**
- * @brief getFreeHeapSize - выдать размер свободной памяти в куче.
- * @return
+ * @brief Выдать размер свободной памяти в куче, без учета фрагментации.
+ * @return размер свободной памяти в куче.
  */
 size_t getFreeHeapSize();

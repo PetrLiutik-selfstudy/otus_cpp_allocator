@@ -4,15 +4,14 @@
 #include <stdint.h>
 
 
-
-// Описатель блока памяти в цепочке свободных блоков кучи.
+///< Описатель блока памяти блока памяти кучи.
 struct mcb_t {
-  mcb_t* nextFreeMcb; // Указатель на следующий свободный блок.
-  size_t size;				// Размер свободного блока.
+  mcb_t* nextMcb; // Указатель на следующий блок.
+  size_t size;    // Размер блока.
 };
 
 ///< Минимальный размер остатка при разбиении блока.
-#define MIN_BLOCK_SIZE	((size_t)(sizeof(mcb_t) * 2))
+static constexpr size_t MIN_BLOCK_SIZE = sizeof(mcb_t) * 2;
 
 /**
  * @brief Вставка блока в цепочку свободных блоков, а так-же слияние свободных блоков.
@@ -21,7 +20,7 @@ struct mcb_t {
 static void insertMcbIntoFreeChunk(mcb_t* block);
 
 /**
- * @brief Инициализация кучи
+ * @brief Инициализация кучи.
  */
 static void customHeapInit();
 
@@ -38,6 +37,7 @@ static mcb_t* endMcb = NULL;
 ///< Размер свободного места в куче.
 static size_t freeBytes = HEAP_SIZE;
 
+
 void* customMalloc(size_t size) {
   void* ptr = NULL;
 
@@ -52,25 +52,25 @@ void* customMalloc(size_t size) {
   {
     // Итерирование по списку свободных блоков, до нахождения первого с большим либо равным размером.
     mcb_t* prevMcb = &beginMcb;
-    mcb_t* curMcb  = beginMcb.nextFreeMcb;
-    while((curMcb->size < size) && (curMcb->nextFreeMcb != NULL)) {
+    mcb_t* curMcb  = beginMcb.nextMcb;
+    while((curMcb->size < size) && (curMcb->nextMcb != NULL)) {
       prevMcb = curMcb;
-      curMcb  = curMcb->nextFreeMcb;
+      curMcb  = curMcb->nextMcb;
     }
 
     // Блок нужного размера найден.
     if(curMcb != endMcb) {
       // Указатель на выделенный блок памяти.
-      ptr = (void*)(((uint8_t*)prevMcb->nextFreeMcb) + sizeof(mcb_t));
+      ptr = static_cast<void*>((reinterpret_cast<uint8_t*>(prevMcb->nextMcb)) + sizeof(mcb_t));
 
       // Необходимо исключить этот блок из списка свободных.
-      prevMcb->nextFreeMcb = curMcb->nextFreeMcb;
+      prevMcb->nextMcb = curMcb->nextMcb;
 
       // Если блок больше требуемого размера производится разбиения на два блока.
       if((curMcb->size - size) > MIN_BLOCK_SIZE)
       {
         // Создание нового блока содержащего остаток памяти от разбиения.
-        mcb_t* newMcb = (mcb_t*)(((uint8_t*)curMcb) + size);
+        mcb_t* newMcb = reinterpret_cast<mcb_t*>((reinterpret_cast<uint8_t*>(curMcb) + size));
         newMcb->size = curMcb->size - size;
         curMcb->size = size;
 
@@ -79,7 +79,7 @@ void* customMalloc(size_t size) {
       }
 
       freeBytes -= curMcb->size;
-      curMcb->nextFreeMcb = NULL;
+      curMcb->nextMcb = NULL;
     }
   }
   return ptr;
@@ -88,12 +88,14 @@ void* customMalloc(size_t size) {
 void customFree(void* ptr) {
   if(ptr != NULL) {
     // Вычисление указателя на mcb.
-    uint8_t* bytePtr = (uint8_t*)ptr;
+    uint8_t* bytePtr = reinterpret_cast<uint8_t*>(ptr);
     bytePtr -= sizeof(mcb_t);
-    mcb_t* mcb = (mcb_t*)bytePtr;
+    mcb_t* mcb = reinterpret_cast<mcb_t*>(bytePtr);
+
+    freeBytes += mcb->size;
 
     // Возврат куска памяти в цепочку свободных.
-    if(mcb->nextFreeMcb == NULL)
+    if(mcb->nextMcb == NULL)
       insertMcbIntoFreeChunk(mcb);
   }
 }
@@ -104,19 +106,19 @@ size_t getFreeHeapSize() {
 
 static void customHeapInit() {
   // Инициализация начального блока списка свободных.
-  beginMcb.nextFreeMcb = (mcb_t*)customHeap;
+  beginMcb.nextMcb = reinterpret_cast<mcb_t*>(customHeap);
   beginMcb.size = 0;
 
   // Блок обозначающий конец кучи endMcb располагается в конце массива.
   uint8_t* heapEnd = customHeap + HEAP_SIZE - sizeof(mcb_t);
-  endMcb = (mcb_t*)heapEnd;
+  endMcb = reinterpret_cast<mcb_t*>(heapEnd);
   endMcb->size = 0;
-  endMcb->nextFreeMcb = NULL;
+  endMcb->nextMcb = NULL;
 
   // Первый свободный блок, содержащий всю память выделенную под кучу минус endMcb.
-  mcb_t* fisrtFreeMcb = (mcb_t*)customHeap;
+  mcb_t* fisrtFreeMcb = reinterpret_cast<mcb_t*>(customHeap);
   fisrtFreeMcb->size = HEAP_SIZE - sizeof(mcb_t);
-  fisrtFreeMcb->nextFreeMcb = endMcb;
+  fisrtFreeMcb->nextMcb = endMcb;
 
   // Куча уже содержит endMcb.
   freeBytes -= sizeof(mcb_t);
@@ -125,32 +127,31 @@ static void customHeapInit() {
 static void insertMcbIntoFreeChunk(mcb_t* mcb) {
   // Итерирование по цепочке блоков до нахождения блока с большим адресом.
   mcb_t* it;
-  for(it = &beginMcb; it->nextFreeMcb < mcb; it = it->nextFreeMcb)
+  for(it = &beginMcb; it->nextMcb < mcb; it = it->nextMcb)
     ;
 
   // Если конец предыдущего блока совпадает с началом текущего, блоки объединяются.
-  uint8_t* bytePtr;
-  bytePtr = (uint8_t*)it;
-  if((bytePtr + it->size) == (uint8_t*)mcb) {
+  uint8_t* bytePtr = reinterpret_cast<uint8_t*>(it);
+  if((bytePtr + it->size) == reinterpret_cast<uint8_t*>(mcb)) {
     it->size += mcb->size;
     mcb = it;
   }
 
   // Если конец текущего блока совпадает с началом следующего, блоки объединяются.
-  bytePtr = (uint8_t*)mcb;
-  if((bytePtr + mcb->size) == (uint8_t*)it->nextFreeMcb) {
-    if(it->nextFreeMcb != endMcb)
+  bytePtr = reinterpret_cast<uint8_t*>(mcb);
+  if((bytePtr + mcb->size) == reinterpret_cast<uint8_t*>(it->nextMcb)) {
+    if(it->nextMcb != endMcb)
     {
-      mcb->size += it->nextFreeMcb->size;
-      mcb->nextFreeMcb = it->nextFreeMcb->nextFreeMcb;
+      mcb->size += it->nextMcb->size;
+      mcb->nextMcb = it->nextMcb->nextMcb;
     }
     else
-      mcb->nextFreeMcb = endMcb;
+      mcb->nextMcb = endMcb;
   }
   else
-    mcb->nextFreeMcb = it->nextFreeMcb;
+    mcb->nextMcb = it->nextMcb;
 
   // Если не было слияния предыдущего и текущего блоков.
   if(it != mcb)
-    it->nextFreeMcb = mcb;
+    it->nextMcb = mcb;
 }

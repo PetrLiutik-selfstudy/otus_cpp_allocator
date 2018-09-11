@@ -1,11 +1,16 @@
+#ifdef _MSC_VER
+#define _ITERATOR_DEBUG_LEVEL (0)
+#define _HAS_ITERATOR_DEBUGGING (0)
+#endif
+
 #include <iostream>
 #include <map>
 #include <vector>
 #include <array>
+#include <iterator>
+#include <algorithm>
 
 #include "custom_heap.h"
-
-using namespace std;
 
 /**
  * @brief Шаблон аллокатора с параметрически заданным количеством элементов.
@@ -35,24 +40,20 @@ class CustomAllocator
     }
 
     pointer allocate(size_type n, const void* = 0) {
-//      pointer ptr = reinterpret_cast<pointer>(customMalloc(n * sizeof(T)));
-//      auto ptr = takeItem(n);
-      pointer ptr = reinterpret_cast<pointer>(aaa);
+      auto ptr = takeBlock(n);
       std::cout << "Allocate "          << n
                 << " block(s) of size " << sizeof(T)
                 << " type \""           << typeid(T).name()
                 << "\" at address "     << ptr << std::endl;
-      std::cout << "N "          << N << std::endl;
       if(ptr == nullptr)
-        throw bad_alloc();
+        throw std::bad_alloc();
       return ptr;
     }
 
     void deallocate(void* ptr, size_type n) {
       if (ptr) {
-//        customFree(ptr);
-//        releaseItem(static_cast<pointer>(ptr), n);
-        std::cout << "Deallocate at address " << ptr << std::endl;
+        releaseBlock(static_cast<pointer>(ptr), n);
+        std::cout << "Deallocate at address " << ptr << " n " << n << std::endl;
       }
     }
 
@@ -118,74 +119,37 @@ class CustomAllocator
 
   private:
 
-    uint8_t aaa[sizeof(T)];
-//    T aaa;
+    std::array<uint8_t, N * sizeof(value_type)> data;
+    std::array<bool, N> flags{{false}};
 
-//    struct item_t {
-//      uint8_t data[sizeof(value_type)];
-//      bool    isBusy{false};
-//      uint8_t pad[3];
-//    };
+    pointer takeBlock(size_t n) {
+      auto first = flags.begin();
+      size_t cnt = 0;
+      for(auto it = flags.begin(); it != flags.end(); ++it) {
+        if(!(*it)) {
+          if(cnt == 0)
+            first = it;
 
-//    std::array<item_t, N> items;
+          if(++cnt == n) {
+            std::fill(first, ++it, true);
+            auto pos = static_cast<size_t>(std::distance(flags.begin(), first));
+            return reinterpret_cast<pointer>(&data[sizeof(value_type) * pos]);
+          }
+        }
+        else
+          cnt = 0;
+      }
+      return nullptr;
+    }
 
-//    pointer takeItem(size_t n) {
-////      auto firstItem = items.begin();
-////      size_t cnt = 0;
-////      for(auto it = items.begin(); it != items.end(); ++it) {
-////        if(!it->isBusy) {
-////          if(cnt == 0)
-////            firstItem = it;
-
-////          if(++cnt == n) {
-////            for(auto it1 = firstItem; it1 != items.end() && cnt > 0; ++it1) {
-////              it1->isBusy = true;
-////              cnt--;
-////            }
-////            return reinterpret_cast<pointer>(firstItem->data);
-////          }
-////        }
-////        else {
-////          cnt = 0;
-////        }
-////      }
-////      return nullptr;
-
-//      size_t firstItem = 0;
-//      size_t cnt = 0;
-//      for(size_t i = 0; i < N; ++i)
-//      {
-//        if(!items[i].isBusy)
-//        {
-////          if(cnt == 0)
-////            firstItem = i;
-
-////          if(++cnt == n)
-////          {
-////            for(size_t j = firstItem; j < N && cnt > 0; ++j)
-////            {
-//              items[i].isBusy = true;
-////              cnt--;
-////            }
-//              pointer ptr = reinterpret_cast<pointer>(&items[firstItem].data[0]);
-//            return ptr;
-////          }
-
-
-//        }
-//      }
-//      return nullptr;
-//    }
-
-//    void releaseItem(pointer ptr, size_t n) {
-//      for(auto& it: items) {
-//        if(reinterpret_cast<pointer>(it.data) == ptr) {
-//          it.isBusy = false;
-////          if(--n == 0)
-////            break;
-//        }
-//      }
-//    }
+    void releaseBlock(pointer ptr, size_t n) {
+      int pos = ptr - reinterpret_cast<pointer>(&data[0]);
+      if(pos >= 0 && pos + static_cast<int>(n) < static_cast<int>(N)) {
+        auto first = flags.begin() + pos;
+        auto last  = first + static_cast<int>(n);
+        std::fill(first, last, false);
+      }
+    }
 };
 
 /**
@@ -217,7 +181,6 @@ class CustomAllocator<T, 0>
     }
 
     pointer allocate(size_type n, const void* = 0) {
-      // TODO сделать собственный менеджер кучи.
       T* ptr = reinterpret_cast<T*>(customMalloc(n * sizeof(T)));
       std::cout << "Allocate "          << n
                 << " block(s) of size " << sizeof(T)
@@ -228,7 +191,6 @@ class CustomAllocator<T, 0>
 
     void deallocate(void* ptr, size_type n) {
       if (ptr) {
-        // TODO сделать собственный менеджер кучи.
         customFree(ptr);
         std::cout << "Deallocate at address " << ptr << " n " << n << std::endl;
       }
@@ -297,33 +259,46 @@ class CustomAllocator<T, 0>
 
 int main()
 {
-//  int* xxx = NULL;
-//  volatile size_t freeHeapSize = getFreeHeapSize();
+  using cust_vec_alloc_t = CustomAllocator<int, 10>;
+  using cust_vec_t = std::vector<int, cust_vec_alloc_t>;
+
+  cust_vec_t vec1(3);
+
+  for(int i = 0; i < 3; ++i)
+    vec1[i] = i + 5;
+
+  vec1.push_back(23);
+
+  for(auto it: vec1)
+    std::cout << it << std::endl;
+
+  auto vec2 = vec1;
+
+  vec1.pop_back();
+
+  for(auto it: vec1)
+    std::cout << it << std::endl;
+
+  for(auto it: vec2)
+    std::cout << it << std::endl;
 
 
-//  xxx = reinterpret_cast<int*>(customMalloc((1000 * sizeof(int))));
 
-//  freeHeapSize = getFreeHeapSize();
+  using cust_map_alloc_t = CustomAllocator<std::pair<const int, int>, 21>;
+  using cust_map_t = std::map<int, int, std::less<int>, cust_map_alloc_t>;
 
-//  customFree(xxx);
+  cust_map_t map1;
 
-//  freeHeapSize = getFreeHeapSize();
+  for(int i = 0; i < 20; ++i)
+    map1[i] = i;
 
-//  std::map<int, int> aaa;
-//  aaa[1] = 21;
+  for(auto it: map1)
+    std::cout << it.first << " " << it.second << std::endl;
 
-//  std::vector<int> bbb;
-//  bbb.push_back(2);
+  cust_map_t map2 = map1;
 
-//  freeHeapSize = getFreeHeapSize();
+  for(auto it: map2)
+    std::cout << it.first << " " << it.second << std::endl;
 
-  std::vector<int, CustomAllocator<int, 1>> ccc(1);
-//  ccc.push_back(2);
-//  ccc.reserve(100);
-//  ccc.push_back(2);
-
-//  freeHeapSize = getFreeHeapSize();
-
-  cout << "Hello World!" << endl;
   return 0;
 }

@@ -267,98 +267,72 @@ class CustomVector {
     using reference = T&;
     using const_reference = const T&;
 
-
-    CustomVector() : data_(nullptr), size_(), capacity_() {}
+    CustomVector() : size_(0), capacity_(0), data_(nullptr) {}
 
     explicit CustomVector(size_type size) : size_(size), capacity_(size) {
       data_ = allocator_.allocate(size_);
-      data_ = allocator_.construct(data_, size);
+      allocator_.construct(data_, size);
     }
 
     CustomVector(size_type size, T value) : size_(size), capacity_(size) {
       data_ = allocator_.allocate(size_);
-      for(auto i = 0; i < size_; ++i)
-          data_[i] = value;
+      for(size_type i = 0; i < size_; ++i)
+        data_[i] = value;
     }
 
-    CustomVector(const std::initializer_list<T>& vec) : size_(vec.size_), capacity_(vec.size_) {
+    CustomVector(const std::initializer_list<T>& vec) : size_(vec.size()), capacity_(vec.size()) {
       data_ = allocator_.allocate(size_);
-      for(auto i = 0; i < vec.size(); ++i)
-          data_[i] = *(vec.begin() + i);
+      for(size_type i = 0; i < vec.size(); ++i)
+        data_[i] = *(vec.begin() + i);
     }
 
-    CustomVector(const CustomVector<T>& vec) : size_(vec.size_), capacity_(vec.capacity_) {
+    CustomVector(const CustomVector& vec) : size_(vec.size_), capacity_(vec.capacity_) {
       data_ = allocator_.allocate(capacity_);
-      for(auto i = 0; i < size_; ++i)
-          data_[i] = vec.data_[i];
+      for(size_type i = 0; i < size_; ++i)
+        data_[i] = vec.data_[i];
     }
 
-    CustomVector(CustomVector<T>&& vec) : size_(vec.size_), capacity_(vec.capacity_) {
-      data_ = vec.data_;
-      vec.data_ = nullptr;
-      vec.size_ = 0;
-      vec.capacity_ = 0;
+    CustomVector(CustomVector&& vec) noexcept : capacity_(0), size_(0), data_(nullptr) {
+      vec.swap(*this);
     }
 
-    CustomVector& operator = (const CustomVector<T>& vec) {
-      if(this == &vec)
-        return *this;
-
-      for(auto i = 0; i < size_; i++)
-        allocator_.destroy(&data_[i]);
-      allocator_.deallocate(data_, capacity_);
-
-      size_ = vec.size_;
-      capacity_ = vec.capacity_;
-
-      data_ = allocator_.allocate(capacity_);
-      for(auto i = 0; i < size_; ++i)
-          data_[i] = vec.data_[i];
+    CustomVector& operator = (CustomVector const& vec) {
+      CustomVector<T, A> tmp(vec);
+      tmp.swap(*this);
+      return *this;
     }
 
-    CustomVector& operator = (CustomVector<T>&& vec) {
-      if(this == &vec)
-        return *this;
-
-      for(auto i = 0; i < size_; ++i)
-        allocator_.destroy(&data_[i]);
-      allocator_.deallocate(data_, capacity_);
-
-      size_ = vec.size_;
-      capacity_ = vec.capacity_;
-      data_ = vec.data_;
-      vec.size_ = 0;
-      vec.capacity = 0;
-      vec.data_ = nullptr;
-
+    CustomVector& operator = (CustomVector&& vec) noexcept {
+      vec.swap(*this);
       return *this;
     }
 
     ~CustomVector() {
-      for(auto i = 0; i < size_; ++i)
+      for(size_type i = 0; i < size_; ++i)
         allocator_.destroy(&data_[i]);
       allocator_.deallocate(data_, capacity_);
     }
 
-    bool operator == (const CustomVector<T>& vec) {
-      if(size_ == vec.size_ && capacity_ == vec.capacity_) {
-        for(auto i = 0; i < size_; ++i)
-          if(data_[i] != vec.data_[i])
-            return false;
-        return true;
-      }
-      return false;
+    bool operator == (const CustomVector& vec) const {
+      if(size_ != vec.size_ || capacity_ != vec.capacity_)
+        return false;
+
+      for(size_type i = 0; i < size_; i++)
+        if (data_[i] != vec.data_[i])
+          return false;
+
+      return true;
     }
 
-    bool operator != (const CustomVector<T>& vec) {
+    bool operator != (const CustomVector& vec) const {
       return !operator == (vec);
     }
 
-    size_type capacity() {
+    size_type capacity() const {
       return capacity_;
     }
 
-    size_type size() {
+    size_type size() const {
       return size_;
     }
 
@@ -392,17 +366,9 @@ class CustomVector {
     }
 
     void swap(CustomVector& other) {
-      auto data = other.data_;
-      auto size = other.size_;
-      auto capacity = other.capacity_;
-
-      other.data_ = data_;
-      other.size_ = size_;
-      other.capacity_ = capacity_;
-
-      size_ = size;
-      capacity_ = capacity;
-      data_ = data;
+      std::swap(data_, other.data_);
+      std::swap(size_, other.size_);
+      std::swap(capacity_, other.capacity_);
     }
 
     T& front() {
@@ -487,14 +453,26 @@ class CustomVector {
     struct iterator : std::iterator<std::bidirectional_iterator_tag, T> {
         explicit iterator(pointer current) : current_(current) {}
 
-        iterator& operator ++() {
+        iterator& operator ++(){
           current_++;
           return *this;
         }
 
-        iterator& operator --() {
+        iterator operator ++(int){
+          iterator temp = *this;
+          current_++;
+          return temp;
+        }
+
+        iterator& operator --(){
           current_--;
           return *this;
+        }
+
+        iterator operator --(int){
+          iterator temp = *this;
+          current_--;
+          return temp;
         }
 
         reference operator *() {
@@ -543,7 +521,7 @@ class CustomVector {
       return last;
     }
 
-    iterator insert(iterator pos, const T & value) {
+    iterator insert(iterator pos, const T& value) {
       size_type i = 0;
       if (capacity_ > size_){
         for(iterator it = data_ + size_; it != pos; --it, ++i)
@@ -615,12 +593,12 @@ class CustomVector {
 int main()
 {
   using cust_vec_alloc_t = CustomAllocator<int, 10>;
-  using cust_vec_t = std::vector<int, cust_vec_alloc_t>;
+  using cust_vec_t = CustomVector<int, cust_vec_alloc_t>;
 
-  cust_vec_t vec1(3);
+  cust_vec_t vec1{1, 2, 3};
 
-  for(int i = 0; i < 3; ++i)
-    vec1[i] = i + 5;
+//  for(int i = 0; i < 3; ++i)
+//    vec1[i] = i + 5;
 
   vec1.push_back(23);
 
@@ -631,34 +609,35 @@ int main()
 
   vec1.pop_back();
 
+  auto vec1it = vec1.begin();
+
+  ++vec1it;
+  std::cout << *vec1it << std::endl;
+
+  bool isSame = vec1 == vec2;
+  std::cout << isSame << std::endl;
+
   for(auto it: vec1)
     std::cout << it << std::endl;
 
   for(auto it: vec2)
     std::cout << it << std::endl;
 
-  using cust_map_alloc_t = CustomAllocator<std::pair<const int, int>, 21>;
-  using cust_map_t = std::map<int, int, std::less<int>, cust_map_alloc_t>;
+//  using cust_map_alloc_t = CustomAllocator<std::pair<const int, int>, 21>;
+//  using cust_map_t = std::map<int, int, std::less<int>, cust_map_alloc_t>;
 
-  cust_map_t map1;
+//  cust_map_t map1;
 
-  for(int i = 0; i < 20; ++i)
-    map1[i] = i;
+//  for(int i = 0; i < 20; ++i)
+//    map1[i] = i;
 
-  for(auto it: map1)
-    std::cout << it.first << " " << it.second << std::endl;
+//  for(auto it: map1)
+//    std::cout << it.first << " " << it.second << std::endl;
 
-  cust_map_t map2 = map1;
+//  cust_map_t map2 = map1;
 
-  for(auto it: map2)
-    std::cout << it.first << " " << it.second << std::endl;
-
-
-  CustomVector<int> custVec;
-  custVec.push_back(10);
-
-  for(auto it: custVec)
-    std::cout << it << std::endl;
+//  for(auto it: map2)
+//    std::cout << it.first << " " << it.second << std::endl;
 
   return 0;
 }

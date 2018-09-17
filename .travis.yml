@@ -1,0 +1,25 @@
+language: cpp
+compiler: gcc
+dist: trusty
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-7
+      - g++-7
+
+install:
+  - export CC=gcc-7
+  - export CXX=g++-7
+  - sudo apt-get install -y libgtest-dev
+  - cd /usr/src/gtest
+  - sudo env "PATH=$PATH" cmake CMakeLists.txt
+  - sudo make
+  - sudo cp *.a /usr/lib
+  - cd "${TRAVIS_BUILD_DIR}"
+
+script:
+  - cmake .
+  - cmake --build .

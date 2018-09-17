@@ -1,8 +1,3 @@
-#ifdef _MSC_VER
-#define _ITERATOR_DEBUG_LEVEL (0)
-#define _HAS_ITERATOR_DEBUGGING (0)
-#endif
-
 #include <iostream>
 #include <map>
 

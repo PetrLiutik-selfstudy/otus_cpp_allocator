@@ -9,6 +9,7 @@
 #include "../inc/custom_allocator.h"
 #include "../inc/custom_vector.h"
 #include "../inc/factorial.h"
+#include "../inc/ver.h"
 
 constexpr int MAX_ELEMS = 10;
 
@@ -47,6 +48,12 @@ int main()
     vec2.push_back(value);
     vec3.push_back(value);
   }
+
+  std::cout << "Alloc version: "
+            << ver_major() << "."
+            << ver_minor() << "."
+            << ver_patch() << "."
+            << std::endl;
 
   std::cout << "STL map with STL allocator" << std::endl;
   for(const auto& it: map1)

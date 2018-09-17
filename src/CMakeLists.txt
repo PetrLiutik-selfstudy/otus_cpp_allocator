@@ -9,12 +9,14 @@ endif ()
 # Setup application
 add_executable(${PROJECT_NAME} main.cpp
         custom_heap.cpp
+        ver.cpp
         ../inc/custom_heap.h
         ../inc/custom_allocator.h
         ../inc/custom_vector.h
-        ../inc/factorial.h)
+        ../inc/factorial.h
+        ../inc/ver.h)
 
-#configure_file(version.h.in version.h)
+configure_file(version.h.in ${PROJECT_SOURCE_DIR}/version.h)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 14

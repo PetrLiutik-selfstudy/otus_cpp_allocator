@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stddef.h>
+
 namespace  custom {
 ///< Размер кучи, байт.
 static constexpr size_t HEAP_SIZE = 65536;

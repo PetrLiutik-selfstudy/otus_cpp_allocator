@@ -1,17 +1,16 @@
 #pragma once
 
-#include <iostream>
-#include <array>
 #include <algorithm>
-#include <memory>
+#include <array>
 
 #include "custom_heap.h"
 
+namespace custom {
 /**
  * @brief Шаблон аллокатора с параметрически заданным количеством элементов.
  */
 template <typename T, size_t N = 0>
-class CustomAllocator
+class allocator
 {
   public:
     using size_type = size_t;
@@ -22,29 +21,18 @@ class CustomAllocator
     using const_reference = const T&;
     using value_type = T;
 
-    CustomAllocator() {
-      std::cout << "Ctor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    allocator() {}
 
-    ~CustomAllocator() {
-      std::cout << "Dtor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    ~allocator() {}
 
-    CustomAllocator(const CustomAllocator& other) : data_(other.data_), flags_(other.flags_) {
-      std::cout << "Copy ctor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    allocator(const allocator& other) : data_(other.data_), flags_(other.flags_) {}
 
-    CustomAllocator(CustomAllocator&& other) noexcept {
-      std::cout << "Move ctor allocator \"" << typeid(T).name() << "\"" << std::endl;
+    allocator(allocator&& other) noexcept {
       other.swap(*this);
     }
 
     pointer allocate(size_type n, const void* = 0) {
       auto ptr = takeBlock(n);
-      std::cout << "Allocate "          << n
-                << " block(s) of size " << sizeof(T)
-                << " type \""           << typeid(T).name()
-                << "\" at address "     << ptr << std::endl;
       if(ptr == nullptr)
         throw std::bad_alloc();
       return ptr;
@@ -53,7 +41,6 @@ class CustomAllocator
     void deallocate(void* ptr, size_type n) {
       if (ptr) {
         releaseBlock(static_cast<pointer>(ptr), n);
-        std::cout << "Deallocate at address " << ptr << " n " << n << std::endl;
       }
     }
 
@@ -65,35 +52,31 @@ class CustomAllocator
       return &cref;
     }
 
-    CustomAllocator& operator = (CustomAllocator const& other) {
-      std::cout << "operator = " << this << std::endl;
-      CustomAllocator<T, N> tmp(other);
+    allocator& operator = (allocator const& other) {
+      allocator<T, N> tmp(other);
       tmp.swap(*this);
       return *this;
     }
 
-    CustomAllocator& operator = (CustomAllocator&& other) noexcept {
-      std::cout << "Move operator = " << this << std::endl;
+    allocator& operator = (allocator&& other) noexcept {
       other.swap(*this);
       return *this;
     }
 
-    bool operator != (const CustomAllocator&) {
+    bool operator != (const allocator&) {
       return true;
     }
 
-    bool operator == (const CustomAllocator&) {
+    bool operator == (const allocator&) {
       return false;
     }
 
     template<typename U, typename ...Args>
     void construct(U* ptr, Args &&...args) {
-      std::cout << "Construct object at address " << ptr << std::endl;
       new(ptr) U(std::forward<Args>(args)...);
     }
 
     void destroy(pointer ptr) {
-      std::cout << "Destruct object at address " << ptr << std::endl;
       ptr->~T();
     }
 
@@ -103,19 +86,14 @@ class CustomAllocator
 
     template <class U>
     struct rebind {
-        using other = CustomAllocator<U, N>;
+        using other = allocator<U, N>;
     };
 
     template <class U>
-    CustomAllocator(const CustomAllocator<U, N>&) {
-      std::cout << "Template copy ctor allocator \""
-                << typeid(T).name() << "\" " << "\""
-                << typeid(U).name() << "\"" << std::endl;
-    }
+    allocator(const allocator<U, N>&) {}
 
     template <class U>
-    CustomAllocator& operator = (const CustomAllocator<U, N>&) {
-      std::cout << "Template = " << this << std::endl;
+    allocator& operator = (const allocator<U, N>&) {
       return *this;
     }
 
@@ -153,7 +131,7 @@ class CustomAllocator
       }
     }
 
-    void swap(CustomAllocator& other) {
+    void swap(allocator& other) {
       std::swap(data_, other.data_);
       std::swap(flags_, other.flags_);
     }
@@ -164,7 +142,7 @@ class CustomAllocator
  * и с использованием кастомной кучи для их размещения.
  */
 template <typename T>
-class CustomAllocator<T, 0>
+class allocator<T, 0>
 {
   public:
     using size_type = size_t;
@@ -175,31 +153,22 @@ class CustomAllocator<T, 0>
     using const_reference = const T&;
     using value_type = T;
 
-    CustomAllocator() {
-      std::cout << "Ctor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    allocator() {}
 
-    ~CustomAllocator() {
-      std::cout << "Dtor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    ~allocator() {}
 
-    CustomAllocator(const CustomAllocator&) {
-      std::cout << "Copy ctor allocator \"" << typeid(T).name() << "\"" << std::endl;
-    }
+    allocator(const allocator&) {}
+
+    allocator(const allocator&&) {}
 
     pointer allocate(size_type n, const void* = 0) {
-      T* ptr = reinterpret_cast<T*>(customMalloc(n * sizeof(T)));
-      std::cout << "Allocate "          << n
-                << " block(s) of size " << sizeof(T)
-                << " type \""           << typeid(T).name()
-                << "\" at address "     << ptr << std::endl;
+      T* ptr = reinterpret_cast<T*>(custom::malloc(n * sizeof(T)));
       return ptr;
     }
 
-    void deallocate(void* ptr, size_type n) {
+    void deallocate(void* ptr, size_type) {
       if (ptr) {
-        customFree(ptr);
-        std::cout << "Deallocate at address " << ptr << " n " << n << std::endl;
+        custom::free(ptr);
       }
     }
 
@@ -211,23 +180,21 @@ class CustomAllocator<T, 0>
       return &cref;
     }
 
-    CustomAllocator<T, 0>&
-    operator = (const CustomAllocator&) {
-      std::cout << "operator = " << this << std::endl;
+    allocator<T, 0>&
+    operator = (const allocator&) {
       return *this;
     }
 
-    CustomAllocator<T, 0>&
-    operator = (const CustomAllocator&&) {
-      std::cout << "operator = " << this << std::endl;
+    allocator<T, 0>&
+    operator = (const allocator&&) {
       return *this;
     }
 
-    bool operator != (const CustomAllocator&) {
+    bool operator != (const allocator&) {
       return true;
     }
 
-    bool operator == (const CustomAllocator&) {
+    bool operator == (const allocator&) {
       return false;
     }
 
@@ -237,7 +204,6 @@ class CustomAllocator<T, 0>
     }
 
     void destroy(pointer ptr) {
-      std::cout << "Destruct object at address " << ptr << std::endl;
       ptr->~T();
     }
 
@@ -247,19 +213,16 @@ class CustomAllocator<T, 0>
 
     template <class U>
     struct rebind {
-        using other = CustomAllocator<U, 0>;
+        using other = allocator<U, 0>;
     };
 
     template <class U>
-    CustomAllocator(const CustomAllocator<U, 0>&) {
-      std::cout << "Template copy ctor allocator \""
-                << typeid(T).name() << "\" " << "\""
-                << typeid(U).name() << "\"" << std::endl;
-    }
+    allocator(const allocator<U, 0>&) {}
 
     template <class U>
-    CustomAllocator& operator = (const CustomAllocator<U, 0>&) {
-      std::cout << "Template = " << this << std::endl;
+    allocator& operator = (const allocator<U, 0>&) {
       return *this;
     }
 };
+
+}

@@ -1,14 +1,15 @@
 #pragma once
 
-#include <iterator>
 #include <algorithm>
+#include <iterator>
 #include <memory>
 
+namespace custom {
 /**
  * @brief Шаблон кастомного вектора.
  */
 template <typename T, typename A = std::allocator<T>>
-class CustomVector {
+class vector {
   public:
     using size_type = size_t;
     using value_type = T;
@@ -17,61 +18,61 @@ class CustomVector {
     using reference = T&;
     using const_reference = const T&;
 
-    CustomVector() : size_(0), capacity_(0), data_(nullptr) {
+    vector() : size_(0), capacity_(0), data_(nullptr) {
       allocator_ = std::make_unique<allocator_type>();
     }
 
-    explicit CustomVector(size_type size) : size_(size), capacity_(size) {
+    explicit vector(size_type size) : size_(size), capacity_(size) {
       allocator_ = std::make_unique<allocator_type>();
       data_ = allocator_->allocate(size_);
       for(size_type i = 0; i < size_; ++i)
         allocator_->construct(&data_[i]);
     }
 
-    CustomVector(size_type size, T value) : size_(size), capacity_(size) {
+    vector(size_type size, T value) : size_(size), capacity_(size) {
       allocator_ = std::make_unique<allocator_type>();
       data_ = allocator_->allocate(size_);
       for(size_type i = 0; i < size_; ++i)
         allocator_->construct(&data_[i], value);
     }
 
-    CustomVector(const std::initializer_list<T>& vec) : size_(vec.size()), capacity_(vec.size()) {
+    vector(const std::initializer_list<T>& vec) : size_(vec.size()), capacity_(vec.size()) {
       allocator_ = std::make_unique<allocator_type>();
       data_ = allocator_->allocate(size_);
       for(size_type i = 0; i < vec.size(); ++i)
         allocator_->construct(&data_[i], *(vec.begin() + i));
     }
 
-    CustomVector(const CustomVector& vec) : size_(vec.size_), capacity_(vec.capacity_) {
+    vector(const vector& vec) : size_(vec.size_), capacity_(vec.capacity_) {
       allocator_ = std::make_unique<allocator_type>();
       data_ = allocator_->allocate(capacity_);
       for(size_type i = 0; i < size_; ++i)
         allocator_->construct(&data_[i], vec.data_[i]);
     }
 
-    CustomVector(CustomVector&& vec) noexcept :
+    vector(vector&& vec) noexcept :
       size_(0), capacity_(0), data_(nullptr) {
       vec.swap(*this);
     }
 
-    CustomVector& operator = (CustomVector const& vec) {
-      CustomVector<T, A> tmp(vec);
+    vector& operator = (vector const& vec) {
+      vector<T, A> tmp(vec);
       tmp.swap(*this);
       return *this;
     }
 
-    CustomVector& operator = (CustomVector&& vec) noexcept {
+    vector& operator = (vector&& vec) noexcept {
       vec.swap(*this);
       return *this;
     }
 
-    ~CustomVector() {
+    ~vector() {
       for(size_type i = 0; i < size_; ++i)
         allocator_->destroy(&data_[i]);
       allocator_->deallocate(data_, capacity_);
     }
 
-    bool operator == (const CustomVector& vec) const {
+    bool operator == (const vector& vec) const {
       if(size_ != vec.size_ || capacity_ != vec.capacity_)
         return false;
 
@@ -82,7 +83,7 @@ class CustomVector {
       return true;
     }
 
-    bool operator != (const CustomVector& vec) const {
+    bool operator != (const vector& vec) const {
       return !operator == (vec);
     }
 
@@ -106,7 +107,7 @@ class CustomVector {
       }
     }
 
-    void swap(CustomVector& other) {
+    void swap(vector& other) {
       std::swap(data_, other.data_);
       std::swap(size_, other.size_);
       std::swap(capacity_, other.capacity_);
@@ -263,3 +264,5 @@ class CustomVector {
       capacity_ = newCapacity;
     }
 };
+
+}

@@ -1,10 +1,11 @@
 #include "../inc/custom_heap.h"
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
+namespace custom {
 
-///< Описатель блока памяти блока памяти кучи.
+///< Описатель блока памяти кучи.
 struct mcb_t {
   mcb_t* nextMcb; // Указатель на следующий блок.
   size_t size;    // Размер блока.
@@ -22,11 +23,11 @@ static void insertMcbIntoFreeChunk(mcb_t* block);
 /**
  * @brief Инициализация кучи.
  */
-static void customHeapInit();
+static void heapInit();
 
 
 ///< Память для кучи.
-static uint8_t customHeap[HEAP_SIZE];
+static uint8_t heap[HEAP_SIZE];
 
 ///< Начальный блок в цепочке свободных.
 static mcb_t beginMcb;
@@ -38,12 +39,12 @@ static mcb_t* endMcb = NULL;
 static size_t freeBytes = HEAP_SIZE;
 
 
-void* customMalloc(size_t size) {
+void* malloc(size_t size) {
   void* ptr = NULL;
 
   // Инициализация кучи.
   if(endMcb == NULL)
-    customHeapInit();
+    heapInit();
 
   if(size > 0)
     size += sizeof(mcb_t);
@@ -85,7 +86,7 @@ void* customMalloc(size_t size) {
   return ptr;
 }
 
-void customFree(void* ptr) {
+void free(void* ptr) {
   if(ptr != NULL) {
     // Вычисление указателя на mcb.
     uint8_t* bytePtr = reinterpret_cast<uint8_t*>(ptr);
@@ -104,19 +105,19 @@ size_t getFreeHeapSize() {
   return freeBytes;
 }
 
-static void customHeapInit() {
+static void heapInit() {
   // Инициализация начального блока списка свободных.
-  beginMcb.nextMcb = reinterpret_cast<mcb_t*>(customHeap);
+  beginMcb.nextMcb = reinterpret_cast<mcb_t*>(heap);
   beginMcb.size = 0;
 
   // Блок обозначающий конец кучи endMcb располагается в конце массива.
-  uint8_t* heapEnd = customHeap + HEAP_SIZE - sizeof(mcb_t);
+  uint8_t* heapEnd = heap + HEAP_SIZE - sizeof(mcb_t);
   endMcb = reinterpret_cast<mcb_t*>(heapEnd);
   endMcb->size = 0;
   endMcb->nextMcb = NULL;
 
   // Первый свободный блок, содержащий всю память выделенную под кучу минус endMcb.
-  mcb_t* fisrtFreeMcb = reinterpret_cast<mcb_t*>(customHeap);
+  mcb_t* fisrtFreeMcb = reinterpret_cast<mcb_t*>(heap);
   fisrtFreeMcb->size = HEAP_SIZE - sizeof(mcb_t);
   fisrtFreeMcb->nextMcb = endMcb;
 
@@ -154,4 +155,6 @@ static void insertMcbIntoFreeChunk(mcb_t* mcb) {
   // Если не было слияния предыдущего и текущего блоков.
   if(it != mcb)
     it->nextMcb = mcb;
+}
+
 }

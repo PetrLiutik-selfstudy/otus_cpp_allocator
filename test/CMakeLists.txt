@@ -5,7 +5,8 @@ enable_testing()
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR})
 
-add_executable(${PROJECT_NAME} test_main.cpp)
+add_executable(${PROJECT_NAME} test_main.cpp
+                               ../src/ver.cpp)
 
 set_target_properties(${PROJECT_NAME}  ${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 14

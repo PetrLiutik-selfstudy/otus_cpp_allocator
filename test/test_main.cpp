@@ -4,7 +4,9 @@
 #include "../inc/factorial.h"
 #include "../inc/ver.h"
 
+#include <algorithm>
 #include <array>
+#include <sstream>
 
 TEST(ver_test_case, ver_major_test) {
   EXPECT_GE(ver_major(), 1);
@@ -127,8 +129,71 @@ TEST(allocator_test_case, deallocate_cust_heap_test) {
   }
 }
 
-TEST(vector_test_case, vector_test) {
-  EXPECT_NE(1, 1);
+TEST(vector_test_case, reserve_test) {
+  constexpr size_t N = 20;
+  custom::vector<int> vec1;
+  vec1.reserve(N);
+  
+  EXPECT_EQ(vec1.capacity(), N);
+  EXPECT_EQ(vec1.size(), 0);
+  
+  custom::vector<int> vec2(N);
+  
+  EXPECT_EQ(vec2.capacity(), N);
+  EXPECT_EQ(vec2.size(), N);
+}
+
+TEST(vector_test_case, init_list_test) {
+  custom::vector<int> vec{1, 2, 3};
+  EXPECT_EQ(vec.size(), 3);
+  EXPECT_EQ(vec[0], 1);
+  EXPECT_EQ(vec[1], 2);
+  EXPECT_EQ(vec[2], 3);
+}
+
+TEST(vector_test_case, push_back_test) {
+  custom::vector<int> vec;
+  EXPECT_EQ(vec.size(), 0);
+  
+  vec.push_back(23);
+  EXPECT_EQ(vec[0], 23)
+}
+
+TEST(vector_test_case, pop_back_test) {
+  custom::vector<int> vec;
+  EXPECT_EQ(vec.size(), 0);
+
+  vec.push_back(23);
+  vec.pop_back();
+  EXPECT_EQ(vec.size(), 0);
+}
+
+TEST(vector_test_case, swap_test) {
+  custom::vector<int> vec1{1, 2, 3};
+  custom::vector<int> vec2{4, 5, 6};
+  std::swap(vec1, vec2);
+
+  EXPECT_EQ(vec1[0], 4);
+  EXPECT_EQ(vec1[1], 5);
+  EXPECT_EQ(vec1[2], 6);
+  EXPECT_EQ(vec2[0], 1);
+  EXPECT_EQ(vec2[1], 2);
+  EXPECT_EQ(vec2[2], 3);
+}
+
+TEST(vector_test_case, range_for_test) {
+  custom::vector<int> vec;
+  std::stringstream ss;
+
+  vec.push_back(1);
+  vec.push_back(2);
+  vec.push_back(3);
+  vec.push_back(4);
+
+  for(const auto& it: vec)
+    ss << it;
+
+  EXPECT_EQ(ss.str(), "1234");
 }
 
 int main(int argc, char *argv[]) {

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <map>
 #include <sstream>
 
 TEST(ver_test_case, ver_major_test) {
@@ -83,6 +84,38 @@ TEST(allocator_test_case, allocate_fail_test)
   }
 
   EXPECT_TRUE(is_bad_alloc);
+}
+
+TEST(allocator_test_case, allocate_map_test) {
+  using alloc_t = custom::allocator<std::pair<const int, int>, 3>;
+  std::map<int, int, std::less<int>, alloc_t> map;
+  
+  try {
+    map[0] = 1;
+    map[1] = 2;
+    map[2] = 3;
+  }
+  catch (const std::bad_alloc &e) {
+    FAIL() << e.what();
+  }
+
+  EXPECT_EQ(map[0], 1);
+  EXPECT_EQ(map[1], 2);
+  EXPECT_EQ(map[2], 3);
+}
+
+TEST(allocator_test_case, allocate_copy_map_test) {
+  using alloc_t = custom::allocator<std::pair<const int, int>, 3>;
+  using map_t = std::map<int, int, std::less<int>, alloc_t>;
+
+  map_t map1;
+
+  map1[0] = 1;
+  map1[1] = 2;
+  map1[2] = 3;
+
+  EXPECT_NO_THROW(map_t map2 = map1);
+  EXPECT_EQ(map1, map2);
 }
 
 TEST(allocator_test_case, deallocate_test) {

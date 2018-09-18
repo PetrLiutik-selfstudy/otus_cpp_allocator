@@ -127,6 +127,10 @@ TEST(allocator_test_case, deallocate_cust_heap_test) {
   }
 }
 
+TEST(vector_test_case, vector_test) {
+  EXPECT_NE(1, 1);
+}
+
 int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

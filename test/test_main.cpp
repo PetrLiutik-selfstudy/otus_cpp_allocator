@@ -156,7 +156,7 @@ TEST(vector_test_case, push_back_test) {
   EXPECT_EQ(vec.size(), 0);
   
   vec.push_back(23);
-  EXPECT_EQ(vec[0], 23)
+  EXPECT_EQ(vec[0], 23);
 }
 
 TEST(vector_test_case, pop_back_test) {

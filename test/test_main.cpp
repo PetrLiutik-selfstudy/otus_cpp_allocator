@@ -87,7 +87,7 @@ TEST(allocator_test_case, allocate_fail_test)
 }
 
 TEST(allocator_test_case, allocate_map_test) {
-  using alloc_t = custom::allocator<std::pair<const int, int>, 3>;
+  using alloc_t = custom::allocator<std::pair<const int, int>, 4>;
   std::map<int, int, std::less<int>, alloc_t> map;
   
   try {
@@ -105,7 +105,7 @@ TEST(allocator_test_case, allocate_map_test) {
 }
 
 TEST(allocator_test_case, allocate_copy_map_test) {
-  using alloc_t = custom::allocator<std::pair<const int, int>, 3>;
+  using alloc_t = custom::allocator<std::pair<const int, int>, 8>;
   using map_t = std::map<int, int, std::less<int>, alloc_t>;
 
   map_t map1;

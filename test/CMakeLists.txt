@@ -21,4 +21,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 target_link_libraries(${PROJECT_NAME} gtest pthread )
 
-add_test(tests ${PROJECT_NAME})
+add_test(ver_test_case ${PROJECT_NAME})
+add_test(factorial_test_case ${PROJECT_NAME})
+add_test(allocator_test_case ${PROJECT_NAME})
+add_test(vector_test_case ${PROJECT_NAME})

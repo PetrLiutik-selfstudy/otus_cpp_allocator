@@ -110,12 +110,17 @@ TEST(allocator_test_case, allocate_copy_map_test) {
 
   map_t map1;
 
-  map1[0] = 1;
-  map1[1] = 2;
-  map1[2] = 3;
+  try {
+    map1[0] = 1;
+    map1[1] = 2;
+    map1[2] = 3;
 
-  EXPECT_NO_THROW(map_t map2 = map1);
-  EXPECT_EQ(map1, map2);
+    map_t map2 = map1;
+    EXPECT_EQ(map1, map2);
+  }
+  catch (const std::bad_alloc &e) {
+    FAIL() << e.what();
+  }
 }
 
 TEST(allocator_test_case, deallocate_test) {
